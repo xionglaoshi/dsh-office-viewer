@@ -50,8 +50,12 @@ export async function renderPresentation(bytes, host, ctx = {}) {
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
   live = await PptxViewer.open(buffer, host, {
     workerUrl: `${ASSET_BASE}/pptx/pptx.worker.js`,
-    lazySlides: true,
-    lazyMedia: true,
+    // 🔴 2026-09-20 实测：lazySlides: true 会让虚拟滚动**只填充前几页、后续永不填充**
+    // （13 页 pptx 只出 5 页，且 scrollIntoView 也救不回来，控制台无报错）。
+    // 关掉后同一文件 14/14 全部渲染。这是集成层参数选择问题，非引擎缺陷。
+    // 代价：大文件首屏渲染更久、DOM 更大 —— 但正确性优先。
+    lazySlides: false,
+    lazyMedia: false,
     fitMode: "contain",
     onWarning: (w) => console.warn("[office-viewer] pptx warning:", w),
   });
