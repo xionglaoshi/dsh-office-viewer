@@ -1,0 +1,50 @@
+{
+  "name": "dsh-office-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "办公文件预览 —— DSH 侧栏 Office 文档免服务预览插件：doc/docx/xls/xlsx/ppt/pptx 及 wps/et/dps、ofd、rtf、csv。纯浏览器端渲染，不依赖任何外部服务。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-api-workspace-files",
+        "@deepseek-ai/dsh-api-remotes"
+      ]
+    }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@file-viewer/core": "^3.1.1",
+    "@file-viewer/doc": "^3.1.1",
+    "@file-viewer/docx": "^0.3.32",
+    "@file-viewer/ppt": "^0.3.4",
+    "@file-viewer/pptx": "^3.1.1",
+    "@file-viewer/renderer-ofd": "^3.1.1",
+    "@file-viewer/renderer-spreadsheet": "^3.1.1",
+    "@file-viewer/renderer-word": "^3.1.1",
+    "jszip": "^3.10.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright": "^1.57.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "selftest": "node scripts/selftest.mjs"
+  }
+}
