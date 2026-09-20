@@ -62,6 +62,21 @@ window.__ModuleLoader__={load({id,factory}){factories.set(id,factory);}};
 <script src="/client.js"></script>
 <script>
 window.__READY__=false;
+/**
+ * 统计"有页号但无内容"的空页壳。
+ *
+ * 2026-09-20 事故的判据：pptx 引擎在懒加载下会建出
+ * div.flyfish-pptx-slide-slot[data-slide-number="6"]（页号在、尺寸在、内容空）。
+ * 这种"静默少渲染"必须被自测抓住。
+ */
+function countEmptySlots(host){
+  const slots=[...host.querySelectorAll('.flyfish-pptx-slide-slot')];
+  return slots.filter(e=>{
+    const t=(e.innerText||'').trim();
+    const g=e.querySelectorAll('svg,canvas,img').length;
+    return t.length===0 && g===0;
+  }).length;
+}
 try{
   const f=factories.get('dsh-office-viewer');
   window.__MOD__=f((n)=>{ if(n==='react') return window.React; throw new Error('unexpected require: '+n); });
@@ -88,7 +103,9 @@ window.__run=async(ext)=>{
     return {ok:true,engine,ms:Math.round(performance.now()-t0),
       textLen:(host.innerText||'').trim().length,
       canvas:host.querySelectorAll('canvas').length,
-      img:host.querySelectorAll('img').length};
+      img:host.querySelectorAll('img').length,
+      emptySlots:countEmptySlots(host),
+      slots:host.querySelectorAll('.flyfish-pptx-slide-slot, .flyfish-pptx-content > *').length};
   }catch(e){ return {ok:false,err:String(e&&e.message||e)}; }
 };
 </script></body></html>`;
@@ -160,13 +177,21 @@ server.listen(PORT, "127.0.0.1", async () => {
   let fail = 0;
   for (const ext of available) {
     const r = await pg.evaluate(`window.__run(${JSON.stringify(ext)})`);
-    const good = r.ok && (r.textLen > 0 || r.canvas > 0 || r.img > 0);
+    // 基本可用性
+    const rendered = r.ok && (r.textLen > 0 || r.canvas > 0 || r.img > 0);
+    // 🔴 完整性：必须渲染出**全部**页/条目，不能只渲染一部分。
+    // 2026-09-20 事故：13 页 pptx 因 lazySlides 只出 5 页，而当时只断言"有内容"→ 逃过自测。
+    // 现在对分页容器做"空页检测"：若存在有页号但无内容的空壳，即判失败。
+    const empty = r.emptySlots ?? 0;
+    const complete = empty === 0;
+    const good = rendered && complete;
     if (!good) fail += 1;
-    console.log(
-      `${good ? "✔" : "✘"} ${ext.padEnd(6)} engine=${String(r.engine).padEnd(10)} ` +
-        `${String(r.ms ?? "-").padStart(6)}ms  text=${String(r.textLen ?? "-").padStart(6)}  ` +
-        `canvas=${r.canvas ?? "-"} ${r.err ? "ERR:" + String(r.err).slice(0, 120) : ""}`
-    );
+    const detail =
+      `${String(r.ms ?? "-").padStart(6)}ms  text=${String(r.textLen ?? "-").padStart(6)}  ` +
+      `canvas=${r.canvas ?? "-"}  slots=${r.slots ?? "-"}` +
+      (empty > 0 ? `  ⚠空页=${empty}` : "") +
+      (r.err ? `  ERR:${String(r.err).slice(0, 110)}` : "");
+    console.log(`${good ? "✔" : "✘"} ${ext.padEnd(6)} engine=${String(r.engine).padEnd(10)} ${detail}`);
   }
   await browser.close();
   server.close();
