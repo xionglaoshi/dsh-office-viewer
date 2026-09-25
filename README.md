@@ -231,4 +231,4 @@ node scripts/selftest.mjs ~/wps          # 传入含 Office 文件的目录
 
 ## 许可
 
-MIT © 2026 熊翔
+MIT © 2026 熊老湿
